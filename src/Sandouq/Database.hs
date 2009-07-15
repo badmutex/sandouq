@@ -6,6 +6,7 @@ import Data.Convertible
 import Data.List
 import qualified Data.Map as Map
 import Database.HDBC
+import Database.HDBC.Sqlite3
 
 data Table = Applications
            | Authors
@@ -128,3 +129,20 @@ insertInto1 :: (IConnection conn) =>
                conn -> [Char] -> [Char] -> [SqlValue] -> IO Integer
 insertInto1 conn name col info =
     run conn ("INSERT INTO " ++ name ++ " (" ++ col ++ ") VALUES (?)") info
+
+
+
+-- | Holds the information needed to connect to a database
+data DatabaseConnector = DBConn {
+      connect  :: IO Connection
+    , username :: String
+    , password :: String
+    }
+
+-- | Create a 'DatabaseConnector' to an Sqlite3 database
+mkSqlite3DBConn :: FilePath -> DatabaseConnector
+mkSqlite3DBConn path = DBConn {
+        connect = connectSqlite3 path
+      , username = ""
+      , password = ""
+      }
