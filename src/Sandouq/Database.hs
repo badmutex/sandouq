@@ -21,7 +21,7 @@ module Sandouq.Database (
                         , createTable
                         , lookupTag
                         , createTag
-                        , insertInto1
+                        , insertInto
                         , mkSqlite3DBConn
 
                         ) where
@@ -139,15 +139,19 @@ createTag conn tag = do
   case t of
     Just _  -> return ()
     Nothing -> do createTable conn tag ["id INTEGER NOT NULL", "hash TEXT NOT NULL"]
-                  insertInto1 conn "tags" "tag" [toSql tag]
+                  insertInto conn Tags $ zip [Tag] [toSql tag]
                   return ()
 
--- | Inserts into the table name at the column the information. Does not commit to the database.
-insertInto1 :: (IConnection conn) =>
-               conn -> String -> String -> [SqlValue] -> IO Integer
-insertInto1 conn name col info =
-    run conn ("INSERT INTO " ++ name ++ " (" ++ col ++ ") VALUES (?)") info
-
+-- | Inserts the values into the table at specified columns.  Does not commit to the database.
+-- The @[Column]@ and @[SqlValue]@ should have the same length, otherwise error.
+insertInto :: (IConnection conn) => conn -> Table -> [(Column, SqlValue)] -> IO ()
+insertInto conn table info =
+    let (cols,vals) = unzip info
+        pretty      = concat . intersperse ", "
+        cs          = pretty $ map show cols
+        vs          = pretty $ map (\_ -> "?") cols
+    in do run conn ("INSERT INTO " ++ show table ++ " (" ++ cs ++ ") VALUES (" ++ vs ++ ")") vals
+          return ()
 
 
 -- | Holds the information needed to connect to a database
