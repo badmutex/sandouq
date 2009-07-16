@@ -19,7 +19,7 @@ maybeMakeDir path =
 initDatabase dbconn path = do
   conn <- connect dbconn
           
-  makeTables tables columns conn
+  makeInitialTables newDatabase conn
   commit conn
 
   return conn

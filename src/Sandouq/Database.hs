@@ -5,19 +5,20 @@ module Sandouq.Database (
                          module Database.HDBC
 
                         -- * Data structures
+                        , Database(..)
                         , Table(..)
                         , Column(..)
                         , DatabaseConnector(..)
 
-                        -- * Variables and Functions
-                        -- ** Variables
-                        , tables
-                        , dummyTables
-                        , columns
+                        -- * Constants and Functions
+                        -- ** Constants
+                        , newDatabase
 
                         -- ** Functions
+                        , constraints
                         , makeTable
-                        , makeTables
+                        , addTable
+                        , makeInitialTables
                         , createTable
                         , lookupTag
                         , createTag
@@ -34,11 +35,11 @@ import Database.HDBC.Sqlite3
 
 data Table = Applications
            | Authors
-           | IndividualAuthor -- ^ Dummy table. Holds the template for field types for the individual authors
+           | DummyAuthor -- ^ Template for the author tables
            | DocType
            | Documents
            | Tags
-           | IndividualTag -- ^ Dummy table. Holds the template for field types for individual tages.
+           | DummyTag    -- ^ Template for the tag tables
              deriving (Eq, Ord, Show)
 
 data Column = ID           -- ^ ubiquitous
@@ -58,25 +59,29 @@ data Column = ID           -- ^ ubiquitous
             | DocHash      -- ^ individual Tag table
               deriving (Eq, Ord, Show)
 
--- | Maps the tables to their columns. Used to create a new database.
-tables :: Map.Map Table [Column]
-tables = Map.fromList [ (Applications, [ID, CMD, Description])
+
+data Database = DB {
+      tables      :: Map.Map Table [Column] -- ^ Maps the tables to their columns.
+    , dummyTables :: Map.Map Table [Column] -- ^ Maps the dummy tables to their columns.
+    , columns     :: Map.Map Column String  -- ^ Maps the columns to the SQL string used to create the column.
+    , newTables   :: Map.Map String Table   -- ^ New tables, templated on 'DummyAuthor' or 'DummyTag'
+    } deriving Show
+
+newDatabase :: Database
+newDatabase = DB tables' dummyTables' columns' Map.empty
+
+tables' = Map.fromList [ (Applications, [ID, CMD, Description])
                       , (Authors,      [FullName])
                       , (DocType,      [ID, Type, AppID])
                       , (Documents,    [Hash, Path, OriginalName, DocTypeID])
                       , (Tags,         [Tag])
                       ]
 
--- | Maps the dummy tables to their columns. Used for creating the individual tables.
-dummyTables :: Map.Map Table [Column]
-dummyTables = Map.fromList [ (IndividualAuthor, [FirstName, MiddleName, LastName])
-                           , (IndividualTag, [DocHash])
+dummyTables' = Map.fromList [ (DummyAuthor, [FirstName, MiddleName, LastName])
+                           , (DummyTag,     [DocHash])
                            ]
 
-
--- | Maps the columns to the SQL string used to create the column.
-columns :: Map.Map Column String
-columns = Map.fromList [ (ID,          (show ID) ++ " INTEGER NOT NULL PRIMARY KEY ASC AUTOINCREMENT")
+columns' = Map.fromList [ (ID,         (show ID) ++ " INTEGER NOT NULL PRIMARY KEY ASC AUTOINCREMENT")
                        , (CMD,         (show CMD) ++ " TEXT NOT NULL")
                        , (Description, (show Description) ++ " TEXT")
                        , (FullName,    (show FullName) ++ " TEXT NOT NULL PRIMARY KEY")
@@ -99,17 +104,38 @@ columns = Map.fromList [ (ID,          (show ID) ++ " INTEGER NOT NULL PRIMARY K
                           ++ " REFERENCES " ++ (show Documents) ++ " (" ++ (show Hash) ++ ")")
                        ]
 
--- | Generates the constraints for the table table and create it. Does not commit to the database.
-makeTable :: IConnection conn => Map.Map Table [Column] -> Map.Map Column String -> conn -> Table -> IO ()
-makeTable tables columns conn table =
-    let constraints = map (\c -> columns `get` c) $ tables `get` table
-    in createTable conn (show table) constraints >> return ()
 
--- | Calls 'makeTable' on each of the keys in the tables map. Does not commit to the database.
-makeTables :: (IConnection conn) => Map.Map Table [Column] -> Map.Map Column String -> conn -> IO ()
-makeTables tables columns conn = 
-    let mkTable = makeTable tables columns conn
-    in mapM_ mkTable $ Map.keys tables
+-- | Generates the constraints for the table table and create it. Does not commit.
+makeTable :: IConnection c => Database -> c -> Table -> IO ()
+makeTable db c t =
+    let cs = constraints db tables t
+    in createTable c (show t) cs >> return ()
+
+-- | Addes a new table to the database. Does not commit.
+addTable :: IConnection conn =>
+            Database
+         -> conn
+         -> String -- ^ new table name
+         -> Table  -- ^ dummy table
+         -> IO Database
+addTable db conn table dummy =
+    let cs = constraints db dummyTables dummy
+    in do createTable conn table cs
+          return $ db {newTables = Map.insert table dummy (newTables db)}
+
+-- | Gets the constraints for a table.
+constraints :: (Ord k) =>
+               Database
+            -> (Database -> Map.Map k [Column]) -- ^ either 'tables' or 'dummyTables'
+            -> k
+            -> [String]
+constraints db tsf t = map (columns db `get`) $ tsf db `get` t
+
+
+-- | Calls 'makeTable' on each of the keys in the tables map. Does not commit.
+makeInitialTables :: (IConnection conn) => Database -> conn -> IO ()
+makeInitialTables db conn =let mkTable = makeTable db conn
+    in mapM_ mkTable . Map.keys $ tables db
 
 -- | I'm qualifying the import of 'Data.Map' which prevents me from using '(!)', so this serves as a replacement.
 get :: (Ord k) => Map.Map k a -> k -> a
@@ -117,7 +143,7 @@ get m k = case Map.lookup k m of
             Just v -> v
             _ -> error "element not in the map"
 
--- | Creates a table using the given name and constraints. Does not commit to the database.
+-- | Creates a table using the given name and constraints. Does not commit.
 createTable :: (IConnection conn) => conn -> String -> [String] -> IO Integer
 createTable conn name constraints = do
   run conn ("CREATE TABLE IF NOT EXISTS " ++ name
@@ -132,7 +158,7 @@ lookupTag table tag conn = do
   cols <- quickQuery' conn ("SELECT tag FROM " ++ (show table)) []
   return . find (\t -> t == tag) $ concat $ map (map fromSql) cols
     
--- | Creates a new tag in the database if it does not exist, else nothing. Does not commit to the database.
+-- | Creates a new tag in the database if it does not exist, else nothing. Does not commit.
 createTag :: (IConnection conn) => conn -> String -> IO ()
 createTag conn tag = do
   t <- lookupTag Tags tag conn
@@ -142,14 +168,14 @@ createTag conn tag = do
                   insertInto conn Tags $ zip [Tag] [toSql tag]
                   return ()
 
--- | Inserts the values into the table at specified columns.  Does not commit to the database.
+-- | Inserts the values into the table at specified columns.  Does not commit.
 -- The @[Column]@ and @[SqlValue]@ should have the same length, otherwise error.
 insertInto :: (IConnection conn) => conn -> Table -> [(Column, SqlValue)] -> IO ()
 insertInto conn table info =
     let (cols,vals) = unzip info
-        pretty      = concat . intersperse ", "
-        cs          = pretty $ map show cols
-        vs          = pretty $ map (\_ -> "?") cols
+        flatten = concat . intersperse ", "
+        cs          = flatten $ map show cols
+        vs          = flatten $ map (\_ -> "?") cols
     in do run conn ("INSERT INTO " ++ show table ++ " (" ++ cs ++ ") VALUES (" ++ vs ++ ")") vals
           return ()
 
