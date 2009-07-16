@@ -1,15 +1,14 @@
 module Sandouq.Init where
 
-import qualified Data.Map as Map
-import Database.HDBC
 import System.Directory
-import System.FilePath.Posix
+import System.FilePath
 
 import Sandouq.Config
 import Sandouq.Database
 
-usage = exec_cmd ++ " <database directory> <database name>"
+usage = exec_cmd ++ " <database directory>"
 
+maybeMakeDir :: FilePath -> IO ()
 maybeMakeDir path =
     doesDirectoryExist path >>=
     \e -> case e of
@@ -17,10 +16,11 @@ maybeMakeDir path =
             True  -> return ()
   
 
-initDatabase path = do
-  conn <- connectToDatabase path
+initDatabase dbconn path = do
+  conn <- connect dbconn
           
-  
+  makeTables tables columns conn
+  commit conn
 
   return conn
   
@@ -28,5 +28,6 @@ initDatabase path = do
 
 makeDatabase config_file db_path = do
 --   add_to_init config_file db_path db_name
-  maybeMakeDir $ dropFileName db_path
-  initDatabase db_path
+  maybeMakeDir db_path
+  let db_file = combine db_path sqlite3_db_file_name
+  initDatabase (mkSqlite3DBConn db_file) db_file

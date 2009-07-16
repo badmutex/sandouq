@@ -1,6 +1,30 @@
 {-# LANGUAGE FlexibleContexts #-}
 
-module Sandouq.Database where
+module Sandouq.Database (
+                         -- * All 'Database.HDBC' modules
+                         module Database.HDBC
+
+                        -- * Data structures
+                        , Table(..)
+                        , Column(..)
+                        , DatabaseConnector(..)
+
+                        -- * Variables and Functions
+                        -- ** Variables
+                        , tables
+                        , dummyTables
+                        , columns
+
+                        -- ** Functions
+                        , makeTable
+                        , makeTables
+                        , createTable
+                        , lookupTag
+                        , createTag
+                        , insertInto1
+                        , mkSqlite3DBConn
+
+                        ) where
 
 import Data.Convertible
 import Data.List
@@ -76,15 +100,13 @@ columns = Map.fromList [ (ID,          (show ID) ++ " INTEGER NOT NULL PRIMARY K
                        ]
 
 -- | Generates the constraints for the table table and create it. Does not commit to the database.
-makeTable :: (Ord k, Ord a, Show k, IConnection conn) =>
-             Map.Map k [a] -> Map.Map a [Char] -> conn -> k -> IO Integer
+makeTable :: IConnection conn => Map.Map Table [Column] -> Map.Map Column String -> conn -> Table -> IO ()
 makeTable tables columns conn table =
     let constraints = map (\c -> columns `get` c) $ tables `get` table
-    in createTable conn (show table) constraints
+    in createTable conn (show table) constraints >> return ()
 
 -- | Calls 'makeTable' on each of the keys in the tables map. Does not commit to the database.
-makeTables :: (Ord k, Ord a, Show k, IConnection conn) =>
-              Map.Map k [a] -> Map.Map a [Char] -> conn -> IO ()
+makeTables :: (IConnection conn) => Map.Map Table [Column] -> Map.Map Column String -> conn -> IO ()
 makeTables tables columns conn = 
     let mkTable = makeTable tables columns conn
     in mapM_ mkTable $ Map.keys tables
@@ -96,7 +118,7 @@ get m k = case Map.lookup k m of
             _ -> error "element not in the map"
 
 -- | Creates a table using the given name and constraints. Does not commit to the database.
-createTable :: (IConnection conn) => conn -> [Char] -> [[Char]] -> IO Integer
+createTable :: (IConnection conn) => conn -> String -> [String] -> IO Integer
 createTable conn name constraints = do
   run conn ("CREATE TABLE IF NOT EXISTS " ++ name
             ++ " (" ++
@@ -105,17 +127,13 @@ createTable conn name constraints = do
            ) []
 
 -- | Attempts to return a tag if it exists in the given table.
-lookupTag :: (Show a,
-              IConnection conn,
-              Eq a1,
-              Convertible SqlValue a1) =>
-             a -> a1 -> conn -> IO (Maybe a1)
+lookupTag :: IConnection conn => Table -> String -> conn -> IO (Maybe String)
 lookupTag table tag conn = do
   cols <- quickQuery' conn ("SELECT tag FROM " ++ (show table)) []
   return . find (\t -> t == tag) $ concat $ map (map fromSql) cols
     
 -- | Creates a new tag in the database if it does not exist, else nothing. Does not commit to the database.
-createTag :: (IConnection conn) => conn -> [Char] -> IO ()
+createTag :: (IConnection conn) => conn -> String -> IO ()
 createTag conn tag = do
   t <- lookupTag Tags tag conn
   case t of
@@ -126,7 +144,7 @@ createTag conn tag = do
 
 -- | Inserts into the table name at the column the information. Does not commit to the database.
 insertInto1 :: (IConnection conn) =>
-               conn -> [Char] -> [Char] -> [SqlValue] -> IO Integer
+               conn -> String -> String -> [SqlValue] -> IO Integer
 insertInto1 conn name col info =
     run conn ("INSERT INTO " ++ name ++ " (" ++ col ++ ") VALUES (?)") info
 
