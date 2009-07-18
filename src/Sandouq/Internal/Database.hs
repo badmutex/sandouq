@@ -1,6 +1,6 @@
 {-# LANGUAGE FlexibleContexts #-}
 
-module Sandouq.Database (
+module Sandouq.Internal.Database (
                          -- * All 'Database.HDBC' modules
                          module Database.HDBC
 

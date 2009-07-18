@@ -1,33 +1,24 @@
-module Sandouq.Init where
+module Main where
 
+import Control.Monad.Instances
 import System.Directory
-import System.FilePath
+import System.Environment
 
-import Sandouq.Config
-import Sandouq.Database
+import Sandouq.Internal.Init
 
-usage = exec_cmd ++ " <database directory>"
+usage = " <directory>"
 
-maybeMakeDir :: FilePath -> IO ()
-maybeMakeDir path =
-    doesDirectoryExist path >>=
-    \e -> case e of
-            False -> createDirectory path
-            True  -> return ()
-  
+printUsage = getProgName >>= print . flip (++) usage
 
-initDatabase dbconn path = do
-  conn <- connect dbconn
-          
-  makeInitialTables newDatabase conn
-  commit conn
+getArgs' :: IO (Maybe FilePath)
+getArgs' = do
+  args <- getArgs
+  if length args /= 1 then printUsage >> return Nothing
+     else canonicalizePath (head args) >>= return . Just
 
-  return conn
-  
-  
 
-makeDatabase config_file db_path = do
---   add_to_init config_file db_path db_name
-  maybeMakeDir db_path
-  let db_file = combine db_path sqlite3_db_file_name
-  initDatabase (mkSqlite3DBConn db_file) db_file
+main = do
+  dir <- getArgs'
+  case dir of
+    Nothing -> return ()
+    Just d  -> print ("Initializing " ++ d) >> initialize d
