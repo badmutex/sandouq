@@ -1,0 +1,12 @@
+Name: Sandouq
+Version: 0.1
+Description: A box/filesystem to store documents in.
+License: BSD
+Author: Badi' Abdul-Wahid
+Maintainer: abdulwahidc@gmail.com
+Build-Type: Simple
+Cabal-Version: >= 1.6
+
+Executable sd
+   Main-is: Sandouq/Sandouq.hs
+   Build-Depends: base,SHA,bytestring,directory,filepath,unix,containers
