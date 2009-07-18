@@ -50,18 +50,17 @@ doc = find (\x -> case x of
                     _             -> False)
 
 
-init' b = canonicalizePath b >>= initialize
-addDoc b d = do b' <- canonicalizePath b
+init' b = putStrLn ("Initializing " ++ b) >> canonicalizePath b >>= initialize
+addDoc d b = do b' <- canonicalizePath b
                 d' <- canonicalizePath d
+                putStrLn ("Adding " ++ d' ++ " into " ++ b')
                 add b' d'
 
-main = do
-  args <- (getArgs >>= getArgs')
+run args =
+    case box args of
+      Nothing -> fail'
+      Just b  -> if isJust (initBox args) then init' (getBox b)
+                 else if isJust (doc args) then addDoc (getDoc . fromJust $ doc args) (getBox b)
+                      else fail'
 
-  case box args of
-    Nothing -> fail'
-    Just b  -> if isJust (initBox args) then init' (getBox b)
-               else if isJust (doc args) then addDoc (getDoc . fromJust $ doc args) (getBox b)
-                    else fail'
-
-  print args
+main = getArgs >>= getArgs' >>= run >> exitSuccess
