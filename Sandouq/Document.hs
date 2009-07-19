@@ -1,4 +1,4 @@
-module Sandouq.Internal.Document where
+module Sandouq.Document where
 
 import Control.Applicative
 import Data.Digest.Pure.SHA
@@ -7,7 +7,7 @@ import System.Directory
 import System.FilePath
 import System.Posix.Files
 
-import Sandouq.Internal.Config.Local
+import Sandouq.Config
 
 data Author = Author {
       firstname  :: String

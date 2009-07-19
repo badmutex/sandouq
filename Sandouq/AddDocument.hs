@@ -10,8 +10,8 @@ import System.FilePath
 import System.IO.Unsafe
 import qualified Data.ByteString.Lazy as BS
 
-import Sandouq.Internal.Config.Global
-import qualified Sandouq.Internal.Document as Doc
+import Sandouq.Config
+import qualified Sandouq.Document as Doc
 
 me = unsafePerformIO getProgName
 

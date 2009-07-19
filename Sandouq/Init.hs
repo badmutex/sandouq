@@ -7,8 +7,7 @@ import System.Environment
 import System.FilePath
 import System.IO.Unsafe
 
-import Sandouq.Internal.Config.Global
-import Sandouq.Internal.Config.Local
+import Sandouq.Config
 
 me = unsafePerformIO getProgName
 

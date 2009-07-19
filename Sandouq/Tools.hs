@@ -1,4 +1,4 @@
-module Sandouq.Internal.Tools where
+module Sandouq.Tools where
 
 import qualified Data.Map as Map
 
