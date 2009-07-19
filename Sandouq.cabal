@@ -7,6 +7,10 @@ Maintainer: abdulwahidc@gmail.com
 Build-Type: Simple
 Cabal-Version: >= 1.6
 
-Executable sd
-   Main-is: Sandouq/Sandouq.hs
+Executable sd-init
+   Main-is: Sandouq/Init.hs
+   Build-Depends: base,SHA,bytestring,directory,filepath,unix,containers
+
+Executable sd-add
+   Main-is: Sandouq/AddDocument.hs
    Build-Depends: base,SHA,bytestring,directory,filepath,unix,containers
