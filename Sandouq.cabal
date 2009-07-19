@@ -1,16 +1,25 @@
-Name: Sandouq
-Version: 0.1
-Description: A box/filesystem to store documents in.
-License: BSD3
-Author: Badi' Abdul-Wahid
-Maintainer: abdulwahidc@gmail.com
-Build-Type: Simple
-Cabal-Version: >= 1.6
+Name:			Sandouq
+Version:		0.1
+Stability:		alpha
+Synopsis:		A box/filesystem to store documents in.
+Homepage:		http://github.com/badi/Sandouq
+Bug-reports:    http://github.com/badi/Sandouq/issues
+Category:		Utility, Utils
+License:		BSD3
+Author:			Badi' Abdul-Wahid
+Maintainer:		abdulwahidc@gmail.com
+Build-Type:		Simple
+Cabal-Version:	>= 1.6
 
 Executable sd-init
-   Main-is: Sandouq/Init.hs
+   main-is:       Sandouq/Init.hs
    Build-Depends: base,SHA,bytestring,directory,filepath,unix,containers
 
 Executable sd-add
-   Main-is: Sandouq/AddDocument.hs
+   main-is:       Sandouq/AddDocument.hs
    Build-Depends: base,SHA,bytestring,directory,filepath,unix,containers
+
+source-repository head
+  type:     git
+  location: git://github.com/badi/Sandouq.git
+

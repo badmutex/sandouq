@@ -63,7 +63,7 @@ parseArgs argv =
     case getOpt Permute options argv of
       (o,n,[]  ) -> return (foldl (flip id) defaultOptions o, n)
       (_,_,errs) -> ioError (userError (concat errs ++ usageInfo header options))
-        where header = "Usage: " ++ me ++ " -[bTt] -d PATH"
+        where header = "Usage: " ++ me ++ " OPTIONS"
 
 
 genArgs Nothing     = pure Nothing
