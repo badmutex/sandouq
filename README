@@ -1,0 +1,12 @@
+* Installation
+  cd Sandouq
+  cabal install
+
+* Usage
+  sd-init -i ~/Documents/Sandouq
+  sd-add -d /foo/bar/baz.pdf -T "Bears, Anthropods, and Zebras" -a Brer,Rabbit;Brer,Bear -t book,fun,animals
+
+* Comments
+That's it so far. This is a way for me to play around with haskell some more and salve an itch I've had for a while: a system for organizing documents.
+
+The name 'Sandouq' was chosen because it means 'Box' in Arabic.
