@@ -1,38 +1,21 @@
 module Sandouq.Config where
 
-import qualified Data.ByteString.Lazy as BS
-import Data.Digest.Pure.SHA
+
 import System.Directory
 import System.FilePath
-import System.IO.Unsafe
+import System.IO.Unsafe (unsafePerformIO)
 
-import Sandouq.Tools
+data HiddenDir = Blobs | Docs    deriving Show
+data VisibleDir = Tags | Authors deriving Show
 
+defaultBox = unsafePerformIO getHomeDirectory </> "Documents" </> "Sandouq"
 
-root = ".sandouq"
+hiddenRoot = ".sandouq"
 
-data InfoDir = Authors
-             | Blobs
-             | Tags
-               deriving Show
+hiddenDirs :: [HiddenDir]
+hiddenDirs = [Blobs, Docs]
 
-hiddenDirs = [Blobs]
-visibleDirs = [Authors, Tags]
-
-blobPath :: Digest -> FilePath
-blobPath digest = root </> show Blobs </> show digest
-
-authorsPath :: String -> FilePath
-authorsPath = getVisiblePath Authors
-
-tagsPath :: String -> FilePath
-tagsPath = getVisiblePath Tags
-
-getHiddenPath :: InfoDir -> String -> FilePath
-getHiddenPath i s = root </> show i </> s
-
-getVisiblePath :: InfoDir -> String -> FilePath
-getVisiblePath i s = show i </> s
+visibleDirs :: [VisibleDir]
+visibleDirs = [Tags, Authors]
 
 
-defaultBox = (unsafePerformIO getHomeDirectory) </> "Documents" </> "Sandouq"

@@ -9,6 +9,7 @@ import System.Environment
 import System.FilePath
 import System.IO.Unsafe
 import qualified Data.ByteString.Lazy as BS
+import qualified Data.Set as S
 
 import Sandouq.Config
 import qualified Sandouq.Document as Doc
@@ -70,25 +71,26 @@ genArgs Nothing     = pure Nothing
 genArgs (Just opts) = do
   let b = box opts
       f = doc opts
-  h <- hash f
-  let d = Doc.Doc {
-            Doc.docTitle = genTitle opts
+  h <- Doc.doHash f
+  let d = Doc.Document {
+            Doc.title = genTitle opts
           , Doc.authors  = genAuthors opts
           , Doc.tags     = genTags opts
           , Doc.hash     = h 
-          , Doc.suffix   = takeExtension f
+          , Doc.context   = Doc.Context { Doc.suffix = takeExtension f
+                                        , Doc.application = Doc.DummyApplication }
           }
   pure . pure $ (f,d,b)
 
 genTitle = Doc.Title . fromJust . title
-genAuthors = map mkAuthor . fromJust . authors
+genAuthors = S.fromList . map mkAuthor . fromJust . authors
 mkAuthor s = Doc.Author {
                Doc.lastname   = (s' !! 0)
-             , Doc.firstname  = (s' !! 1)
-             , Doc.middlename = (s' !! 2)
+             , Doc.firstname  = let s'' = (s' !! 1) in if null s'' then Nothing else Just s''
+             , Doc.middlename = let s'' = (s' !! 2) in if null s'' then Nothing else Just s''
              }
     where s' = splinter ',' s ++ ["",""]
-genTags = map Doc.Tag . fromJust . tags
+genTags = S.fromList . map Doc.Tag . fromJust . tags
 
 
 hash :: FilePath -> IO Digest
@@ -109,4 +111,6 @@ main =
     genArgs      >>=
     run
         where run Nothing   = pure ()
-              run (Just (f,d,b)) = Doc.add f d b
+              run (Just (f,d,b)) = Doc.addDocument f b d
+
+

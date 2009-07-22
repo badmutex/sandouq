@@ -57,17 +57,13 @@ initialize dir = do
   initHidden dir
   initVisible dir
 
-initHidden d = initDir (d </> root) hiddenDirs
+initHidden d = initDir (d </> hiddenRoot) hiddenDirs
 initVisible d = initDir d visibleDirs
 
-initDir root = 
-    mapM_ (createDirectoryIfMissing True . combine root . show)
+initDir root = mapM_ (createDirectoryIfMissing True . combine root . show)
 
 
 data ConfigOption = Name String
                   | Location String FilePath
                     deriving (Eq, Ord, Show)
 
-configString :: ConfigOption -> String
-configString (Name s) = "box.name " ++ s
-configString (Location n l) = n ++ ".location " ++ l
