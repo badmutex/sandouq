@@ -11,6 +11,7 @@ data VisibleDir = Tags | Authors deriving Show
 defaultBox = unsafePerformIO getHomeDirectory </> "Documents" </> "Sandouq"
 
 hiddenRoot = ".sandouq"
+blobDir = hiddenRoot </> show Blobs
 
 hiddenDirs :: [HiddenDir]
 hiddenDirs = [Blobs, Docs]

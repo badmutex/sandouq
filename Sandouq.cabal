@@ -19,6 +19,10 @@ Executable sd-add
    main-is:       Sandouq/AddDocument.hs
    Build-Depends: base,SHA,bytestring,directory,filepath,unix,containers
 
+Executable sd-find
+   main-is:		Sandouq/Find.hs
+   Build-Depends: base,SHA,bytestring,directory,filepath,unix,containers
+
 source-repository head
   type:     git
   location: git://github.com/badi/Sandouq.git

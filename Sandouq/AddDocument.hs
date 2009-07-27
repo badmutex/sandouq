@@ -112,5 +112,3 @@ main =
     run
         where run Nothing   = pure ()
               run (Just (f,d,b)) = Doc.addDocument f b d
-
-

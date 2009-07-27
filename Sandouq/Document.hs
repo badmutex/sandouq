@@ -1,26 +1,9 @@
-module Sandouq.Document -- (
-
---                          -- * Data Structures
---                          Document (..)
---                         , Title (..)
---                         , Author (..)
---                         , Tag (..)
---                         , Context (..)
---                         , Hash (..)
---                         , Status (..)
-
---                          -- * Functions
---                         , addAuthor
---                         , rmAuthor
---                         , addTag
---                         , rmTag
-
---                         )
-    where
+module Sandouq.Document where
 
 import Control.Monad
 import Control.Monad.Instances
 import Data.Digest.Pure.SHA
+import Data.List
 import Data.Maybe (isJust, fromJust)
 import System.FilePath
 import System.Directory
@@ -47,6 +30,18 @@ data Document = Document {
 
 fromFileName d = (fromTitle . title) d <.> (suffix . context) d
 
+prettyDocument d = let t  ="Title:\t\t " ++ (fromTitle . title) d ++ "\n"
+                       as = list "Authors:\t " fromAuthor authors "\t\t\t"
+                       ts = list "Tags:\t\t " fromTag tags "\t\t\t"
+                       list c f f' ts = let as = intersperse ("\n" ++ ts) .
+                                                 map f . S.toList . f' $ d
+                                        in c ++ head as ++
+                                               (concat . tail) as
+                                               ++ "\n"
+                       h = "Hash:\t\t " ++ (fromHash . hash) d
+                   in t ++ as ++ ts ++ h
+
+
 newtype Hash = Hash String deriving (Read, Show)
 fromHash (Hash s) = s
 
@@ -58,10 +53,10 @@ data Author = Author {
     , firstname  :: Maybe String
     , middlename :: Maybe String
     } deriving (Eq, Ord, Read, Show)
-fromAuthor a = lastname a ++ ", " ++ fname a ++ mname a
-    where fname    = name middlename
-          mname    = name firstname
-          name f a = if isJust . f $ a then (fromJust . f) a else ""
+fromAuthor a = lastname a ++ fname a ++ mname a
+    where fname    = name firstname ", "
+          mname    = name middlename ". "
+          name f p a = if isJust . f $ a then ((++) p . fromJust . f) a else ""
 
 newtype Tag = Tag String deriving (Eq, Ord, Read, Show)
 fromTag (Tag t) = t
@@ -202,9 +197,13 @@ addDocument f b d = let h = findBlob b (hash d)
                           setCurrentDirectory cwd
 
 test = let a = S.fromList [
-                Author { lastname = "Abdul-Wahid"
+                 Author { lastname = "Abdul-Wahid"
                        , firstname = Just "C"
-                       , middlename = Just "Badi'" }]
+                       , middlename = Just "Badi'" }
+               , Author { lastname = "baz"
+                        , firstname = Just "foo"
+                        , middlename = Nothing}
+               ]
            ts = S.fromList [Tag "foo", Tag "bar", Tag "baz"]
            t = Title "Badi's Resume"
            c = Context { suffix = "pdf", application = DummyApplication }
